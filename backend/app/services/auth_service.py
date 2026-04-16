@@ -49,3 +49,39 @@ class AuthService:
                 "username": user.username,
             },
         }
+
+    @staticmethod
+    def register(session: Session, username: str, password: str, confirm: str) -> dict:
+        if not username or not password:
+            raise APIError("username and password are required", status_code=400)
+
+        if len(username) < 3:
+            raise APIError("Username must be at least 3 characters", status_code=400)
+
+        if len(password) < 6:
+            raise APIError("Password must be at least 6 characters", status_code=400)
+
+        if password != confirm:
+            raise APIError("Passwords do not match", status_code=400)
+
+        existing = session.query(User).filter(User.username == username.strip()).first()
+        if existing:
+            raise APIError(f"Username '{username}' is already taken", status_code=409)
+
+        user = User(
+            username=username.strip(),
+            password_hash=generate_password_hash(password),
+            is_active=True,
+        )
+        session.add(user)
+        session.flush()
+
+        token = issue_token(user.id, user.username)
+        return {
+            "token": token,
+            "tokenType": "Bearer",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+            },
+        }

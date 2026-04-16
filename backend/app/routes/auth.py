@@ -21,3 +21,18 @@ def login():
         )
 
     return success(data, message="Login successful")
+
+
+@auth_bp.post("/register")
+def register():
+    payload = request.get_json(silent=True) or {}
+
+    with atomic_session() as session:
+        data = AuthService.register(
+            session,
+            username=str(payload.get("username", "")).strip(),
+            password=str(payload.get("password", "")),
+            confirm=str(payload.get("confirmPassword", "")),
+        )
+
+    return success(data, message="Account created successfully", status_code=201)
