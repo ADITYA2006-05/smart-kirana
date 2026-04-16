@@ -129,7 +129,12 @@ function switchSection(id, el) {
   if (id === 'smartinsights' && typeof refreshInsights === 'function') setTimeout(refreshInsights, 100);
   if (id === 'datamining' && typeof runMiningEngine === 'function') setTimeout(runMiningEngine, 100);
   if (id === 'eod' && typeof renderEOD === 'function') setTimeout(renderEOD, 100);
+  // AUTO-LOAD: fetch live inventory from DB whenever inventory section is opened
+  if (id === 'inventory' && typeof window.refreshInventory === 'function') {
+    setTimeout(window.refreshInventory, 120);
+  }
 }
+
 
 // ========== SIDEBAR TOGGLE ==========
 function toggleSidebar() {
@@ -156,35 +161,46 @@ window.refreshInventory = async function () {
   const tbody = document.getElementById('invTbody');
   if (!tbody) return;
 
+  // Show a subtle loading shimmer on the section header
+  const table = document.getElementById('inventoryTable');
+  const empty = document.getElementById('invEmptyState');
+
   try {
     const result = await window.apiCall('/inventory', 'GET');
     if (!result.ok || !Array.isArray(result.data)) return;
 
-    // Clear and rebuild rows
+    if (result.data.length === 0) {
+      // DB is empty — keep hardcoded sample rows visible
+      if (typeof window.applyInventoryFilters === 'function') window.applyInventoryFilters();
+      return;
+    }
+
+    // Clear and rebuild rows from DB
     tbody.innerHTML = '';
     result.data.forEach(p => {
-      const status = p.stock <= 0 ? 'outofstock'
-                   : p.stock <= 5 ? 'critical'
-                   : p.stock <= 10 ? 'low'
+      const stock  = parseFloat(p.stock  || 0);
+      const price  = parseFloat(p.price  || 0);
+      const name   = p.name || 'Unknown';
+      // Backend doesn't store category yet — derive a default
+      const cat    = p.category || deriveCategory(name);
+
+      const status = stock <= 0  ? 'critical'
+                   : stock <= 5  ? 'critical'
+                   : stock <= 15 ? 'low'
                    : 'instock';
-      const badgeClass = status === 'instock'    ? 'badge-success'
-                       : status === 'low'        ? 'badge-warning'
-                       : status === 'critical'   ? 'badge-danger'
+      const badgeClass = status === 'instock' ? 'badge-success'
+                       : status === 'low'     ? 'badge-warning'
                        : 'badge-danger';
       const badgeText  = status === 'instock' ? 'In Stock'
                        : status === 'low'     ? 'Low Stock'
-                       : status === 'critical'? 'Critical'
-                       : 'Out of Stock';
-      const pct    = Math.max(5, Math.min(100, Math.round((p.stock / 200) * 100)));
+                       : 'Critical';
+      const pct    = Math.max(4, Math.min(100, Math.round((stock / 200) * 100)));
       const barClr = status === 'instock' ? 'var(--accent-green)'
                    : status === 'low'     ? 'var(--accent-orange)'
                    : 'var(--accent-red)';
-      const name   = p.name || 'Unknown';
-      const price  = parseFloat(p.price  || 0);
-      const stock  = parseFloat(p.stock  || 0);
 
       const tr = document.createElement('tr');
-      tr.dataset.category = p.category || 'General';
+      tr.dataset.category = cat;
       tr.dataset.status   = status;
       tr.dataset.stock    = stock;
       tr.dataset.price    = price;
@@ -192,11 +208,12 @@ window.refreshInventory = async function () {
 
       tr.innerHTML = `
         <td><div class="flex items-center gap-12">
-          <span style="font-size:20px">📦</span>
-          <div><div class="font-bold">${name}</div><div class="text-xs text-muted">${p.category || '—'}</div></div>
+          <span style="font-size:20px">${productEmoji(name)}</span>
+          <div><div class="font-bold">${escHtml(name)}</div>
+               <div class="text-xs text-muted">${escHtml(cat)}</div></div>
         </div></td>
         <td class="text-muted">—</td>
-        <td><span class="badge badge-info">${p.category || 'General'}</span></td>
+        <td><span class="badge badge-info">${escHtml(cat)}</span></td>
         <td class="font-bold">₹${price.toFixed(0)}</td>
         <td>
           <div>${Math.round(stock)} units</div>
@@ -204,20 +221,61 @@ window.refreshInventory = async function () {
             <div class="progress-fill" style="width:${pct}%;background:${barClr}"></div>
           </div>
         </td>
-        <td class="text-muted">—</td>
+        <td class="text-muted">${p.lastUpdated ? p.lastUpdated.slice(0,10) : '—'}</td>
         <td><span class="badge ${badgeClass}">${badgeText}</span></td>
         <td><button class="btn btn-ghost btn-sm"><i class="fas fa-ellipsis"></i></button></td>
       `;
       tbody.appendChild(tr);
     });
 
-    // Re-run filters/sort from filters.js
-    if (typeof applyInventoryFilters === 'function') applyInventoryFilters();
+    if (table) table.style.display = '';
+    if (empty) empty.style.display = 'none';
+
+    // Re-run filters/sort
+    if (typeof window.applyInventoryFilters === 'function') window.applyInventoryFilters();
 
   } catch (_) {
-    // Backend unreachable — silently skip, keep existing rows
+    // Backend unreachable — keep existing HTML rows
+    if (typeof window.applyInventoryFilters === 'function') window.applyInventoryFilters();
   }
 };
+
+// Derive a display category from product name keywords
+function deriveCategory(name) {
+  const n = name.toLowerCase();
+  if (/milk|butter|curd|paneer|cheese|dairy|amul/.test(n)) return 'Dairy';
+  if (/rice|dal|wheat|flour|atta|grain|pulses|beans/.test(n)) return 'Grains';
+  if (/oil|ghee|cooking|canola|sunflower|mustard/.test(n)) return 'Cooking';
+  if (/soap|shampoo|detergent|surf|clean|colin|cleanser/.test(n)) return 'Cleaning';
+  if (/biscuit|chips|chocolate|snack|candy|silk/.test(n)) return 'Snacks';
+  if (/juice|water|coke|pepsi|drink|soda|beverage/.test(n)) return 'Beverages';
+  return 'General';
+}
+
+// Pick an emoji based on name
+function productEmoji(name) {
+  const n = name.toLowerCase();
+  if (/rice/.test(n)) return '🍚';
+  if (/milk/.test(n)) return '🥛';
+  if (/butter/.test(n)) return '🧈';
+  if (/oil/.test(n)) return '🫒';
+  if (/sugar/.test(n)) return '🍬';
+  if (/flour|atta/.test(n)) return '🌾';
+  if (/soap|shampoo|detergent/.test(n)) return '🧴';
+  if (/chocolate|silk/.test(n)) return '🍫';
+  if (/tea/.test(n)) return '🍵';
+  if (/coffee/.test(n)) return '☕';
+  if (/bread/.test(n)) return '🍞';
+  if (/juice|drink/.test(n)) return '🧃';
+  if (/dal|beans/.test(n)) return '🫘';
+  return '📦';
+}
+
+// Safe HTML escape
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // OPTIMISTIC ROW INSERT — immediately adds a row to the DOM
@@ -638,3 +696,23 @@ function mobileGoTo(id) {
   const t = sectionTitles[id];
   if (mt && t) mt.textContent = t[0];
 }
+
+// ─────────────────────────────────────────────────────────────
+// AUTO-LOAD INVENTORY ON PAGE OPEN
+// Fetches all DB products so they appear immediately in the
+// Inventory section without needing to navigate away and back.
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  // Wait for filters.js to expose window.applyInventoryFilters,
+  // and for index.html to define window.apiCall (auth guard).
+  setTimeout(function autoLoadInventory() {
+    if (typeof window.refreshInventory === 'function' &&
+        typeof window.apiCall          === 'function') {
+      window.refreshInventory();
+    } else {
+      // Retry up to 10 times with 200ms gap
+      autoLoadInventory._retries = (autoLoadInventory._retries || 0) + 1;
+      if (autoLoadInventory._retries < 10) setTimeout(autoLoadInventory, 200);
+    }
+  }, 600);
+});
