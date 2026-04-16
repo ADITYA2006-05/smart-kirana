@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalCart — Sign In</title>
+  <meta name="description" content="Sign in to LocalCart, the voice-powered kirana shop assistant." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #08080f;
+      --bg-card:    rgba(16, 16, 30, 0.85);
+      --bg-input:   rgba(255,255,255,0.05);
+      --border:     rgba(255,255,255,0.08);
+      --border-focus: rgba(79,125,248,0.7);
+      --text:       #e8e8f0;
+      --text-muted: #7070a0;
+      --accent:     #4f7df8;
+      --accent-2:   #9b6dff;
+      --accent-glow: rgba(79,125,248,0.35);
+      --success:    #34d399;
+      --danger:     #f87171;
+      --radius:     16px;
+      --radius-sm:  10px;
+      --shadow:     0 24px 64px rgba(0,0,0,0.6);
+      --font:       'Inter', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ===== ANIMATED BACKGROUND ===== */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .bg-canvas::before {
+      content: '';
+      position: absolute;
+      width: 900px;
+      height: 900px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79,125,248,0.12) 0%, transparent 70%);
+      top: -300px; left: -200px;
+      animation: drift1 18s ease-in-out infinite alternate;
+    }
+
+    .bg-canvas::after {
+      content: '';
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(155,109,255,0.10) 0%, transparent 70%);
+      bottom: -250px; right: -100px;
+      animation: drift2 22s ease-in-out infinite alternate;
+    }
+
+    .bg-blob3 {
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(54,214,231,0.07) 0%, transparent 70%);
+      bottom: 10%; left: 30%;
+      animation: drift1 14s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes drift1 {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(60px, 40px) scale(1.1); }
+    }
+    @keyframes drift2 {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(-50px, -30px) scale(1.08); }
+    }
+
+    /* ===== GRID OVERLAY ===== */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* ===== LAYOUT ===== */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-card);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 44px 40px 40px;
+      box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ===== LOGO ===== */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px; height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 32px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.4);
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      border-radius: inherit;
+    }
+
+    .logo-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+
+    .logo-sub {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.1px;
+    }
+
+    /* ===== FORM ===== */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 15px;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 44px 13px 42px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14.5px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+
+    .form-input::placeholder { color: var(--text-muted); }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      background: rgba(79,125,248,0.07);
+      box-shadow: 0 0 0 3px rgba(79,125,248,0.18);
+    }
+
+    .form-input:focus ~ .input-icon,
+    .input-wrap:focus-within .input-icon {
+      color: var(--accent);
+    }
+
+    .toggle-pw {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+    .toggle-pw:hover { color: var(--text); }
+
+    /* ===== REMEMBER / FORGOT ===== */
+    .form-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+
+    .remember-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .remember-label input[type="checkbox"] {
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .forgot-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .forgot-link:hover { opacity: 0.75; }
+
+    /* ===== SUBMIT BUTTON ===== */
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 6px 24px rgba(79,125,248,0.4);
+    }
+
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      opacity: 0.93;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 32px rgba(79,125,248,0.5);
+    }
+    .btn-login:hover:not(:disabled)::before { opacity: 1; }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-login .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    .btn-login.loading .spinner { display: inline-block; }
+    .btn-login.loading .btn-text { opacity: 0.8; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== ALERT ===== */
+    .alert {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-bottom: 18px;
+      animation: fadeIn 0.25s ease;
+    }
+    .alert.show { display: flex; }
+    .alert-error {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.3);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.3);
+      color: #6ee7b7;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ===== DEMO CREDS ===== */
+    .demo-box {
+      background: rgba(79,125,248,0.07);
+      border: 1px solid rgba(79,125,248,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .demo-box:hover {
+      background: rgba(79,125,248,0.12);
+      border-color: rgba(79,125,248,0.4);
+    }
+    .demo-box strong { color: var(--accent); }
+    .demo-box-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .demo-creds { display: flex; gap: 20px; }
+    .demo-cred { display: flex; flex-direction: column; }
+    .demo-cred span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px; }
+    .demo-cred strong { font-size: 13.5px; color: var(--text); font-weight: 600; }
+
+    /* ===== FOOTER ===== */
+    .card-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .card-footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .card-footer a:hover { opacity: 0.75; }
+
+    /* ===== STATUS BADGE ===== */
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: pulse 2s ease infinite;
+    }
+    .status-dot.online { background: var(--success); }
+    .status-dot.offline { background: var(--danger); animation: none; }
+    .status-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 480px) {
+      .card { padding: 32px 24px 28px; }
+      .logo-icon { width: 56px; height: 56px; font-size: 22px; }
+      .logo-title { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-canvas"><div class="bg-blob3"></div></div>
+<div class="bg-grid"></div>
+
+<main class="page">
+  <div class="card" role="main">
+
+    <!-- Logo -->
+    <div class="logo-area">
+      <div class="logo-icon"><i class="fas fa-store"></i></div>
+      <div class="logo-title">LocalCart</div>
+      <div class="logo-sub">Voice-Powered Kirana Assistant</div>
+    </div>
+
+    <!-- Backend status -->
+    <div class="status-row">
+      <div class="status-dot" id="backendDot"></div>
+      <span class="status-text" id="backendStatusText">Connecting to server...</span>
+    </div>
+
+    <!-- Error / Success Alert -->
+    <div class="alert alert-error" id="alertBox" role="alert">
+      <i class="fas fa-exclamation-circle"></i>
+      <span id="alertMsg">Invalid credentials. Please try again.</span>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" autocomplete="on" novalidate>
+
+      <!-- Username -->
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <div class="input-wrap">
+          <i class="fas fa-user input-icon"></i>
+          <input
+            class="form-input"
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter username"
+            autocomplete="username"
+            required
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock input-icon"></i>
+          <input
+            class="form-input"
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter password"
+            autocomplete="current-password"
+            required
+          />
+          <button type="button" class="toggle-pw" id="togglePw" aria-label="Show/hide password">
+            <i class="fas fa-eye" id="pwEyeIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Remember / Forgot -->
+      <div class="form-meta">
+        <label class="remember-label">
+          <input type="checkbox" id="rememberMe" />
+          Remember me
+        </label>
+        <a href="#" class="forgot-link" onclick="showForgotHint(event)">Forgot password?</a>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="btn-login" id="loginBtn">
+        <span class="spinner"></span>
+        <span class="btn-text">Sign In</span>
+      </button>
+
+    </form>
+
+    <!-- Demo credentials -->
+    <div class="divider">Quick Access</div>
+    <div class="demo-box" id="demoBox" onclick="fillDemo()" title="Click to auto-fill demo credentials">
+      <div class="demo-box-title"><i class="fas fa-bolt"></i> Demo Credentials — click to fill</div>
+      <div class="demo-creds">
+        <div class="demo-cred">
+          <span>Username</span>
+          <strong>admin</strong>
+        </div>
+        <div class="demo-cred">
+          <span>Password</span>
+          <strong>admin123</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer">
+      <a href="index.html"><i class="fas fa-arrow-left" style="font-size:11px"></i> Back to app</a>
+      &nbsp;·&nbsp;
+      <span>LocalCart v2.0</span>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ===== CONFIG =====
+  const BACKEND_URL = 'http://127.0.0.1:5005';
+  const TOKEN_KEY   = 'lc_auth_token';
+  const USER_KEY    = 'lc_auth_user';
+
+  // ===== BACKEND HEALTH CHECK =====
+  async function checkBackendHealth() {
+    const dot  = document.getElementById('backendDot');
+    const text = document.getElementById('backendStatusText');
+    try {
+      const res = await fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        dot.className = 'status-dot online';
+        text.textContent = 'Server online · Ready to sign in';
+        return true;
+      }
+    } catch (_) {}
+    dot.className = 'status-dot offline';
+    text.textContent = 'Server offline · running in local mode';
+    return false;
+  }
+
+  // ===== TOKEN GUARD — if already logged in, skip login =====
+  (function checkAlreadyLoggedIn() {
+    const token = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      window.location.replace('index.html');
+    }
+  })();
+
+  // ===== DOM REFS =====
+  const form      = document.getElementById('loginForm');
+  const loginBtn  = document.getElementById('loginBtn');
+  const alertBox  = document.getElementById('alertBox');
+  const alertMsg  = document.getElementById('alertMsg');
+  const userInput = document.getElementById('username');
+  const passInput = document.getElementById('password');
+  const rememberMe = document.getElementById('rememberMe');
+
+  // ===== SHOW/HIDE ALERT =====
+  function showAlert(msg, type = 'error') {
+    alertBox.className = `alert alert-${type} show`;
+    alertMsg.textContent = msg;
+  }
+  function hideAlert() { alertBox.classList.remove('show'); }
+
+  // ===== TOGGLE PASSWORD VISIBILITY =====
+  document.getElementById('togglePw').addEventListener('click', () => {
+    const isText = passInput.type === 'text';
+    passInput.type = isText ? 'password' : 'text';
+    document.getElementById('pwEyeIcon').className = isText ? 'fas fa-eye' : 'fas fa-eye-slash';
+  });
+
+  // ===== FILL DEMO CREDENTIALS =====
+  function fillDemo() {
+    userInput.value = 'admin';
+    passInput.value = 'admin123';
+    hideAlert();
+    userInput.dispatchEvent(new Event('input'));
+    passInput.dispatchEvent(new Event('input'));
+
+    // Brief flash animation on demo box
+    const box = document.getElementById('demoBox');
+    box.style.background = 'rgba(79,125,248,0.22)';
+    setTimeout(() => { box.style.background = ''; }, 500);
+  }
+
+  // ===== RESTORE REMEMBERED USERNAME =====
+  const savedUser = localStorage.getItem('lc_remembered_user');
+  if (savedUser) {
+    userInput.value = savedUser;
+    rememberMe.checked = true;
+  }
+
+  // ===== FORM SUBMIT =====
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    const username = userInput.value.trim();
+    const password = passInput.value;
+
+    if (!username) { showAlert('Please enter your username.'); userInput.focus(); return; }
+    if (!password)  { showAlert('Please enter your password.'); passInput.focus(); return; }
+
+    // Set loading state
+    loginBtn.disabled = true;
+    loginBtn.classList.add('loading');
+    loginBtn.querySelector('.btn-text').textContent = 'Signing in…';
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      const body = await res.json();
+
+      if (res.ok && body.ok) {
+        // ✅ Success
+        const { token, user } = body.data;
+
+        // Store token
+        const storage = rememberMe.checked ? localStorage : sessionStorage;
+        storage.setItem(TOKEN_KEY, token);
+        storage.setItem(USER_KEY, JSON.stringify(user));
+
+        // Remember username if checked
+        if (rememberMe.checked) {
+          localStorage.setItem('lc_remembered_user', username);
+        } else {
+          localStorage.removeItem('lc_remembered_user');
+        }
+
+        showAlert(`Welcome back, ${user.username}! Redirecting…`, 'success');
+        alertBox.className = 'alert alert-success show';
+
+        // Brief delay then navigate
+        setTimeout(() => { window.location.replace('index.html'); }, 900);
+      } else {
+        // ❌ Backend returned error
+        const msg = body.message || 'Invalid credentials. Please try again.';
+        showAlert(msg);
+        passInput.value = '';
+        passInput.focus();
+      }
+    } catch (err) {
+      // Network / offline fallback — let user in for local-only mode
+      if (err.name === 'TimeoutError' || err.name === 'TypeError') {
+        // Offline-mode bypass: allow demo login without backend
+        if (username === 'admin' && password === 'admin123') {
+          const fakeToken = 'offline-demo-token';
+          const storage   = rememberMe.checked ? localStorage : sessionStorage;
+          storage.setItem(TOKEN_KEY, fakeToken);
+          storage.setItem(USER_KEY, JSON.stringify({ id: 1, username: 'admin' }));
+          showAlert('Backend offline — continuing in local mode.', 'success');
+          alertBox.className = 'alert alert-success show';
+          setTimeout(() => { window.location.replace('index.html'); }, 1000);
+        } else {
+          showAlert('Could not reach server. Check that the backend is running on port 5005.');
+        }
+      } else {
+        showAlert('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.classList.remove('loading');
+      loginBtn.querySelector('.btn-text').textContent = 'Sign In';
+    }
+  });
+
+  // ===== FORGOT PASSWORD HINT =====
+  function showForgotHint(e) {
+    e.preventDefault();
+    showAlert('Contact your admin to reset your password. Default: admin / admin123', 'error');
+  }
+
+  // ===== ENTER KEY ON USERNAME =====
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); passInput.focus(); }
+  });
+
+  // ===== INIT =====
+  checkBackendHealth();
+  userInput.focus();
+</script>
+</body>
+</html>
