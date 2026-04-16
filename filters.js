@@ -4,9 +4,6 @@
 (function () {
   'use strict';
 
-  /* ══════════════════════════════════════════════════════════
-     CSS — Filter chips, sort items, active states
-  ══════════════════════════════════════════════════════════ */
   const style = document.createElement('style');
   style.textContent = `
     .filter-chip {
@@ -73,6 +70,7 @@
      INVENTORY — RENDER
   ══════════════════════════════════════════════════════════ */
   function applyInventoryFilters() {
+
     const tbody   = document.getElementById('invTbody');
     const empty   = document.getElementById('invEmptyState');
     const table   = document.getElementById('inventoryTable');
@@ -321,6 +319,10 @@
      INIT
   ══════════════════════════════════════════════════════════ */
   function init() {
+    // Expose as globals so app.js / refreshInventory can call them
+    window.applyInventoryFilters = applyInventoryFilters;
+    window.applyOrderFilters     = applyOrderFilters;
+
     initInventoryFilters();
     initOrderFilters();
     applyInventoryFilters(); // render with default sort applied

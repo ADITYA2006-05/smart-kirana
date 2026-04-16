@@ -149,7 +149,130 @@ function showToast(msg, type = 'success') {
   setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(40px)'; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
-// Add product modal handler - sends product to backend with auth, falls back to client DataEngine
+// ─────────────────────────────────────────────────────────────
+// INVENTORY REFRESH — fetch from backend and re-render #invTbody
+// ─────────────────────────────────────────────────────────────
+window.refreshInventory = async function () {
+  const tbody = document.getElementById('invTbody');
+  if (!tbody) return;
+
+  try {
+    const result = await window.apiCall('/inventory', 'GET');
+    if (!result.ok || !Array.isArray(result.data)) return;
+
+    // Clear and rebuild rows
+    tbody.innerHTML = '';
+    result.data.forEach(p => {
+      const status = p.stock <= 0 ? 'outofstock'
+                   : p.stock <= 5 ? 'critical'
+                   : p.stock <= 10 ? 'low'
+                   : 'instock';
+      const badgeClass = status === 'instock'    ? 'badge-success'
+                       : status === 'low'        ? 'badge-warning'
+                       : status === 'critical'   ? 'badge-danger'
+                       : 'badge-danger';
+      const badgeText  = status === 'instock' ? 'In Stock'
+                       : status === 'low'     ? 'Low Stock'
+                       : status === 'critical'? 'Critical'
+                       : 'Out of Stock';
+      const pct    = Math.max(5, Math.min(100, Math.round((p.stock / 200) * 100)));
+      const barClr = status === 'instock' ? 'var(--accent-green)'
+                   : status === 'low'     ? 'var(--accent-orange)'
+                   : 'var(--accent-red)';
+      const name   = p.name || 'Unknown';
+      const price  = parseFloat(p.price  || 0);
+      const stock  = parseFloat(p.stock  || 0);
+
+      const tr = document.createElement('tr');
+      tr.dataset.category = p.category || 'General';
+      tr.dataset.status   = status;
+      tr.dataset.stock    = stock;
+      tr.dataset.price    = price;
+      tr.dataset.name     = name;
+
+      tr.innerHTML = `
+        <td><div class="flex items-center gap-12">
+          <span style="font-size:20px">📦</span>
+          <div><div class="font-bold">${name}</div><div class="text-xs text-muted">${p.category || '—'}</div></div>
+        </div></td>
+        <td class="text-muted">—</td>
+        <td><span class="badge badge-info">${p.category || 'General'}</span></td>
+        <td class="font-bold">₹${price.toFixed(0)}</td>
+        <td>
+          <div>${Math.round(stock)} units</div>
+          <div class="progress-bar mt-4" style="width:80px">
+            <div class="progress-fill" style="width:${pct}%;background:${barClr}"></div>
+          </div>
+        </td>
+        <td class="text-muted">—</td>
+        <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+        <td><button class="btn btn-ghost btn-sm"><i class="fas fa-ellipsis"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Re-run filters/sort from filters.js
+    if (typeof applyInventoryFilters === 'function') applyInventoryFilters();
+
+  } catch (_) {
+    // Backend unreachable — silently skip, keep existing rows
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// OPTIMISTIC ROW INSERT — immediately adds a row to the DOM
+// ─────────────────────────────────────────────────────────────
+function insertInventoryRow({ name, price, stock, category }) {
+  const tbody = document.getElementById('invTbody');
+  if (!tbody) return;
+
+  const status   = stock <= 5 ? 'critical' : stock <= 10 ? 'low' : 'instock';
+  const badgeCls = status === 'instock' ? 'badge-success' : status === 'low' ? 'badge-warning' : 'badge-danger';
+  const badgeTxt = status === 'instock' ? 'In Stock' : status === 'low' ? 'Low' : 'Critical';
+  const pct      = Math.max(5, Math.min(100, Math.round((stock / 200) * 100)));
+  const barClr   = status === 'instock' ? 'var(--accent-green)' : status === 'low' ? 'var(--accent-orange)' : 'var(--accent-red)';
+
+  const tr = document.createElement('tr');
+  tr.dataset.category = category || 'General';
+  tr.dataset.status   = status;
+  tr.dataset.stock    = stock;
+  tr.dataset.price    = price;
+  tr.dataset.name     = name;
+  tr.style.animation  = 'fadeIn 0.3s ease';
+
+  tr.innerHTML = `
+    <td><div class="flex items-center gap-12">
+      <span style="font-size:20px">📦</span>
+      <div><div class="font-bold">${name}</div><div class="text-xs text-muted">${category || '—'}</div></div>
+    </div></td>
+    <td class="text-muted">NEW</td>
+    <td><span class="badge badge-info">${category || 'General'}</span></td>
+    <td class="font-bold">₹${parseFloat(price).toFixed(0)}</td>
+    <td>
+      <div>${Math.round(stock)} units</div>
+      <div class="progress-bar mt-4" style="width:80px">
+        <div class="progress-fill" style="width:${pct}%;background:${barClr}"></div>
+      </div>
+    </td>
+    <td class="text-muted">—</td>
+    <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+    <td><button class="btn btn-ghost btn-sm"><i class="fas fa-ellipsis"></i></button></td>
+  `;
+  tbody.appendChild(tr);
+
+  // Hide empty state, show table
+  const empty = document.getElementById('invEmptyState');
+  const table = document.getElementById('inventoryTable');
+  if (empty) empty.style.display = 'none';
+  if (table) table.style.display = '';
+
+  // Re-run filters so new row respects current active filters/sort
+  if (typeof applyInventoryFilters === 'function') applyInventoryFilters();
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADD PRODUCT MODAL HANDLER
+// ─────────────────────────────────────────────────────────────
 function addProductFromModal() {
   const nameEl     = document.getElementById('addProductName');
   const priceEl    = document.getElementById('addProductPrice');
@@ -170,36 +293,44 @@ function addProductFromModal() {
   if (!name) { showToast('Product name is required', 'error'); return; }
 
   (async () => {
-    // ─── Try authenticated backend call first ───────────────────────
+    // ─── Try authenticated backend call ────────────────
     try {
       if (typeof window.apiCall === 'function') {
         const result = await window.apiCall('/inventory/add', 'POST', { name, price, stock });
         if (result.ok) {
-          showToast(`${name} added to inventory ✓`);
+          showToast(`✓ ${name} added to inventory`);
           document.getElementById('addProductModal')?.classList.remove('show');
-          if (typeof window.refreshInventory === 'function') window.refreshInventory();
+          // Clear the form fields
+          ['addProductName','addProductPrice','addProductStock','addProductSKU','addProductExpiry','addProductDescription'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+          });
+          if (categoryEl) categoryEl.value = '';
+          // Optimistic insert with backend data if available
+          const prod = result.data || { name, price, stock, category };
+          insertInventoryRow({ name: prod.name || name, price: prod.price || price, stock: prod.stock || stock, category });
+          // Then do a full refresh from backend in background
+          setTimeout(() => window.refreshInventory(), 300);
           return;
         }
-        // backend returned an error message
         showToast(result.message || 'Backend error', 'error');
         return;
       }
     } catch (_) { /* fall through to DataEngine */ }
 
-    // ─── Local DataEngine fallback (offline) ────────────────────────
+    // ─── Local DataEngine fallback (offline) ───────────
     try {
       if (typeof DataEngine !== 'undefined' && typeof DataEngine.addNewItem === 'function') {
         DataEngine.addNewItem({ name, price, stock, category, sku, expiry, description: desc });
-        showToast(`${name} added (local mode)`);
-        document.getElementById('addProductModal')?.classList.remove('show');
-        if (typeof window.refreshInventory === 'function') window.refreshInventory();
-        return;
       }
     } catch (_) {}
 
-    showToast('Unable to add product', 'error');
+    // Always show the row optimistically even in offline mode
+    showToast(`✓ ${name} added (local mode)`);
+    document.getElementById('addProductModal')?.classList.remove('show');
+    insertInventoryRow({ name, price, stock, category });
   })();
 }
+
 
 // ========== ANALYTICS FILTER TABS ==========
 function setAnalyticsFilter(el) {
