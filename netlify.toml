@@ -1,8 +1,0 @@
-[build]
-  command = "echo 'No build command needed'"
-  publish = "."
-
-[[redirects]]
-  from = "/backend/*"
-  to = "/index.html"
-  status = 404
