@@ -1,5 +1,5 @@
 // Service Worker v19 — Network First (always fresh JS/CSS/HTML)
-const CACHE_NAME = 'lekha-v19';
+const CACHE_NAME = 'localcart-v19';
 
 // On install: immediately activate (skip waiting)
 self.addEventListener('install', () => {
