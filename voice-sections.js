@@ -511,6 +511,8 @@
   });
 
   // ========== BILL UI UPDATE ==========
+  // Always uses DataEngine (client-side) as source of truth for voice billing.
+  // Voice commands add items to DataEngine directly; no backend round-trip needed here.
   window.updateBillUI = function() {
     const itemsEl = document.getElementById('liveBillItems');
     const countEl = document.getElementById('billItemCount');
@@ -520,128 +522,60 @@
     const discRow = document.getElementById('billDiscountRow');
     const discEl = document.getElementById('billDiscountDisplay');
     if (!itemsEl) return;
-    // Try fetching authoritative bill from backend; fallback to client DataEngine
-    (async () => {
-      try {
-        const res = await fetch('/billing/current');
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.ok) {
-            const bill = body.data || {};
-            const items = bill.items || [];
-            if (!items.length) {
-              itemsEl.innerHTML = '<div class="bill-empty"><i class="fas fa-cart-shopping"></i>Bill is empty. Start adding items.</div>';
-              countEl.textContent = '0 items';
-              totalEl.textContent = '0';
-              subRow.style.display = 'none';
-              discRow.style.display = 'none';
-              return;
-            }
 
-            itemsEl.innerHTML = items.map((item) => `
-              <div class="live-bill-item">
-                <div>
-                  <div class="live-bill-item-name">${item.name}</div>
-                  <div class="live-bill-item-detail">${item.qty} ${item.unit || ''}  ${item.unitPrice || item.price || ''}</div>
-                </div>
-                <div style="text-align:right">
-                  <div class="live-bill-item-price">${item.lineTotal !== undefined ? item.lineTotal : (item.unitPrice || item.price || 0) * (item.qty || 0)}</div>
-                  <button class="btn btn-ghost btn-sm" onclick="removeBillItem('${item.name}')" style="font-size:11px;color:var(--accent-red);padding:2px 8px"><i class="fas fa-times"></i></button>
-                </div>
-              </div>
-            `).join('');
-
-            countEl.textContent = `${items.length} items`;
-            totalEl.textContent = `${bill.total || 0}`;
-
-            if ((bill.discountValue || 0) > 0) {
-              subRow.style.display = 'flex';
-              subEl.textContent = `${bill.subtotal || 0}`;
-              discRow.style.display = 'flex';
-              const discAmt = (bill.subtotal || 0) - (bill.total || 0);
-              discEl.textContent = `-${discAmt}`;
-            } else {
-              subRow.style.display = 'none';
-              discRow.style.display = 'none';
-            }
-            return;
-          }
-        }
-      } catch (e) {
-        // ignore and fallback
-      }
-
-      // fallback to client DataEngine
-      try {
-        const bill = DataEngine.getBill();
-        if (bill.items.length === 0) {
-          itemsEl.innerHTML = '<div class="bill-empty"><i class="fas fa-cart-shopping"></i>Bill is empty. Start adding items.</div>';
-          countEl.textContent = '0 items';
-          totalEl.textContent = '0';
-          subRow.style.display = 'none';
-          discRow.style.display = 'none';
-          return;
-        }
-
-        itemsEl.innerHTML = bill.items.map((item) => `
-          <div class="live-bill-item">
-            <div>
-              <div class="live-bill-item-name">${item.name}</div>
-              <div class="live-bill-item-detail">${item.qty} ${item.unit || ''}  ${item.price || ''}</div>
-            </div>
-            <div style="text-align:right">
-              <div class="live-bill-item-price">${item.subtotal || item.price * item.qty}</div>
-              <button class="btn btn-ghost btn-sm" onclick="removeBillItem('${item.name}')" style="font-size:11px;color:var(--accent-red);padding:2px 8px"><i class="fas fa-times"></i></button>
-            </div>
-          </div>
-        `).join('');
-
-        countEl.textContent = `${bill.items.length} items`;
-        const subtotal = DataEngine.getBillSubtotal();
-        const total = DataEngine.getBillTotal();
-        totalEl.textContent = `${total}`;
-
-        if (bill.discount > 0) {
-          subRow.style.display = 'flex';
-          subEl.textContent = `${subtotal}`;
-          discRow.style.display = 'flex';
-          const discAmt = subtotal - total;
-          discEl.textContent = `-${discAmt}`;
-        } else {
-          subRow.style.display = 'none';
-          discRow.style.display = 'none';
-        }
-      } catch (e) {
-        // final fallback - clear UI
+    try {
+      const bill = DataEngine.getBill();
+      if (bill.items.length === 0) {
         itemsEl.innerHTML = '<div class="bill-empty"><i class="fas fa-cart-shopping"></i>Bill is empty. Start adding items.</div>';
-        countEl.textContent = '0 items';
-        totalEl.textContent = '0';
-        subRow.style.display = 'none';
-        discRow.style.display = 'none';
+        if (countEl) countEl.textContent = '0 items';
+        if (totalEl) totalEl.textContent = '₹0';
+        if (subRow) subRow.style.display = 'none';
+        if (discRow) discRow.style.display = 'none';
+        return;
       }
-    })();
+
+      itemsEl.innerHTML = bill.items.map((item) => `
+        <div class="live-bill-item">
+          <div>
+            <div class="live-bill-item-name">${item.name}</div>
+            <div class="live-bill-item-detail">${item.qty} ${item.unit || ''} &nbsp;·&nbsp; ₹${item.price || ''}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="live-bill-item-price">₹${item.subtotal || item.price * item.qty}</div>
+            <button class="btn btn-ghost btn-sm" onclick="removeBillItem('${item.name}')" style="font-size:11px;color:var(--accent-red);padding:2px 8px"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+      `).join('');
+
+      if (countEl) countEl.textContent = `${bill.items.length} item${bill.items.length !== 1 ? 's' : ''}`;
+      const subtotal = DataEngine.getBillSubtotal();
+      const total = DataEngine.getBillTotal();
+      if (totalEl) totalEl.textContent = `₹${total}`;
+
+      if (bill.discount > 0) {
+        if (subRow) subRow.style.display = 'flex';
+        if (subEl) subEl.textContent = `₹${subtotal}`;
+        if (discRow) discRow.style.display = 'flex';
+        if (discEl) discEl.textContent = `-₹${subtotal - total}`;
+      } else {
+        if (subRow) subRow.style.display = 'none';
+        if (discRow) discRow.style.display = 'none';
+      }
+    } catch (e) {
+      itemsEl.innerHTML = '<div class="bill-empty"><i class="fas fa-cart-shopping"></i>Bill is empty. Start adding items.</div>';
+      if (countEl) countEl.textContent = '0 items';
+      if (totalEl) totalEl.textContent = '₹0';
+      if (subRow) subRow.style.display = 'none';
+      if (discRow) discRow.style.display = 'none';
+    }
   };
 
   window.removeBillItem = function(name) {
-    // Try server-authoritative removal, fallback to client DataEngine
-    (async () => {
-      try {
-        const res = await fetch('/billing/remove', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({item: name})});
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.ok) {
-            updateBillUI();
-            if (typeof showToast === 'function') showToast(`Removed ${name}`);
-            return;
-          }
-        }
-      } catch (e) {
-        // ignore and fallback
-      }
-
-      // fallback
-      try { DataEngine.removeFromBill(name); updateBillUI(); if (typeof showToast === 'function') showToast(`Removed ${name}`); } catch (_) {}
-    })();
+    try {
+      DataEngine.removeFromBill(name);
+      updateBillUI();
+      if (typeof showToast === 'function') showToast(`Removed ${name}`);
+    } catch (_) {}
   };
 
   window.submitManualCommand = function() {
