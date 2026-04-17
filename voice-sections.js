@@ -523,12 +523,10 @@
     // Try fetching authoritative bill from backend; fallback to client DataEngine
     (async () => {
       try {
-        const res = await fetch('/billing/current');
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.ok) {
-            const bill = body.data || {};
-            const items = bill.items || [];
+        const result = await window.apiCall('/billing/current', 'GET');
+        if (result.ok) {
+          const bill = result.data || {};
+          const items = bill.items || [];
             if (!items.length) {
               itemsEl.innerHTML = '<div class="bill-empty"><i class="fas fa-cart-shopping"></i>Bill is empty. Start adding items.</div>';
               countEl.textContent = '0 items';
@@ -626,14 +624,11 @@
     // Try server-authoritative removal, fallback to client DataEngine
     (async () => {
       try {
-        const res = await fetch('/billing/remove', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({item: name})});
-        if (res.ok) {
-          const body = await res.json();
-          if (body && body.ok) {
-            updateBillUI();
-            if (typeof showToast === 'function') showToast(`Removed ${name}`);
-            return;
-          }
+        const result = await window.apiCall('/billing/remove', 'POST', {item: name});
+        if (result.ok) {
+          updateBillUI();
+          if (typeof showToast === 'function') showToast(`Removed ${name}`);
+          return;
         }
       } catch (e) {
         // ignore and fallback
@@ -660,10 +655,9 @@
     // Server-authoritative checkout with fallback to client-side
     (async () => {
       try {
-        const res = await fetch('/billing/checkout', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({})});
-        const body = await res.json();
-        if (res.ok && body && body.ok) {
-          const data = body.data;
+        const result = await window.apiCall('/billing/checkout', 'POST', {});
+        if (result.ok) {
+          const data = result.data;
           // data contains transaction, lowStockAlerts, billJson, whatsappMessage
           window.currentLastBill = data.transaction;
           renderReceipt(data.transaction);
@@ -671,6 +665,11 @@
           const delay = options && options.source === 'voice' ? 250 : 120;
           setTimeout(() => switchSection('billpreview', document.querySelector('[data-section=billpreview]')), delay);
           updateBillUI();
+          
+          // Re-sync inventory from DB so the deducted stock reflects instantaneously
+          if (typeof window.refreshInventory === 'function') {
+            setTimeout(() => window.refreshInventory(), 500);
+          }
           return;
         }
       } catch (e) {
